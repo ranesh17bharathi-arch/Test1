@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
-# SPDX-License-Identifier: Apache-2.0
-
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
@@ -9,7 +6,7 @@ from cocotb.triggers import ClockCycles
 async def test_full_adder(dut):
     dut._log.info("Starting Full Adder Test")
 
-    # Start clock
+    # Start clock (100 KHz)
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
 
@@ -24,7 +21,6 @@ async def test_full_adder(dut):
     # Full Adder Truth Table Test Loop
     # Inputs: (A, B, Cin) -> Expected: (Cout, Sum)
     test_cases = [
-        # (A, B, Cin, Expected_Cout, Expected_Sum)
         (0, 0, 0, 0, 0),
         (0, 0, 1, 0, 1),
         (0, 1, 0, 0, 1),
@@ -40,14 +36,17 @@ async def test_full_adder(dut):
         input_val = a | (b << 1) | (cin << 2)
         dut.ui_in.value = input_val
 
+        # Wait one clock cycle for the output to settle
         await ClockCycles(dut.clk, 1)
 
-        # Extract output bits: bit0 = Sum, bit1 = Cout
+        # Extract output bits from uo_out
         output_val = dut.uo_out.value.integer
-        actual_sum = output_val & 1
-        actual_cout = (output_val >> 1) & 1
+        actual_sum = output_val & 1           # bit 0
+        actual_cout = (output_val >> 1) & 1   # bit 1
 
-        dut._log.info(f"Input A={a} B={b} Cin={cin} -> Sum={actual_sum} Cout={actual_cout}")
+        # Log the current test state
+        dut._log.info(f"Input A={a} B={b} Cin={cin} -> Expected: Sum={exp_sum} Cout={exp_cout} | Actual: Sum={actual_sum} Cout={actual_cout}")
 
-        assert actual_sum == exp_sum, f"Failed Sum: A={a} B={b} Cin={cin}"
-        assert actual_cout == exp_cout, f"Failed Cout: A={a} B={b} Cin={cin}"
+        # Assertions
+        assert actual_sum == exp_sum, f"Failed Sum for A={a}, B={b}, Cin={cin}. Expected {exp_sum}, got {actual_sum}."
+        assert actual_cout == exp_cout, f"Failed Cout for A={a}, B={b}, Cin={cin}. Expected {exp_cout}, got {actual_cout}."
