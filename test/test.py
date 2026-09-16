@@ -5,36 +5,49 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
-
 @cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+async def test_full_adder(dut):
+    dut._log.info("Starting Full Adder Test")
 
-    # Set the clock period to 10 us (100 KHz)
+    # Start clock
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
 
-    # Reset
-    dut._log.info("Reset")
+    # Apply reset
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
+    await ClockCycles(dut.clk, 5)
     dut.rst_n.value = 1
 
-    dut._log.info("Test project behavior")
+    # Full Adder Truth Table Test Loop
+    # Inputs: (A, B, Cin) -> Expected: (Cout, Sum)
+    test_cases = [
+        # (A, B, Cin, Expected_Cout, Expected_Sum)
+        (0, 0, 0, 0, 0),
+        (0, 0, 1, 0, 1),
+        (0, 1, 0, 0, 1),
+        (0, 1, 1, 1, 0),
+        (1, 0, 0, 0, 1),
+        (1, 0, 1, 1, 0),
+        (1, 1, 0, 1, 0),
+        (1, 1, 1, 1, 1),
+    ]
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    for a, b, cin, exp_cout, exp_sum in test_cases:
+        # Construct ui_in value: bit0 = A, bit1 = B, bit2 = Cin
+        input_val = a | (b << 1) | (cin << 2)
+        dut.ui_in.value = input_val
 
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
+        await ClockCycles(dut.clk, 1)
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
+        # Extract output bits: bit0 = Sum, bit1 = Cout
+        output_val = dut.uo_out.value.integer
+        actual_sum = output_val & 1
+        actual_cout = (output_val >> 1) & 1
 
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+        dut._log.info(f"Input A={a} B={b} Cin={cin} -> Sum={actual_sum} Cout={actual_cout}")
+
+        assert actual_sum == exp_sum, f"Failed Sum: A={a} B={b} Cin={cin}"
+        assert actual_cout == exp_cout, f"Failed Cout: A={a} B={b} Cin={cin}"
