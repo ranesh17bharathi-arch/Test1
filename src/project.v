@@ -15,7 +15,15 @@ module tt_um_example (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
-
+// Map low-order input bits for convenience
+  wire a   = ui_in[0];
+  wire b   = ui_in[1];
+  wire cin = ui_in[2];
+  // Full Adder Logic:
+  // Sum  = A XOR B XOR Cin
+  // Cout = (A AND B) OR (Cin AND (A XOR B))
+  wire sum  = a ^ b ^ cin;
+  wire cout = (a & b) | (cin & (a ^ b));
   // All output pins must be assigned. If not used, assign to 0.
   assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
   assign uio_out = 0;
